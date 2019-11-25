@@ -3,7 +3,7 @@
 // Licensed under the MIT License.
 // ------------------------------------------------------------
 
-using System.Globalization;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -15,6 +15,12 @@ namespace Subtract
 {
     public class Startup
     {
+        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            PropertyNameCaseInsensitive = true,
+        };
+
         public static void Main(string[] args) =>
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(x => x.UseStartup<Startup>())
@@ -27,13 +33,13 @@ namespace Subtract
 
         private static async Task Subtract(HttpContext context)
         {
-            var operands = await DeserializeAsync<Operands>(context.Request.Body);
+            var operands = await DeserializeAsync<Operands>(context.Request.Body, JsonOptions);
 
             var result = decimal.Parse(operands.OperandOne) - decimal.Parse(operands.OperandTwo);
 
             context.Response.ContentType = "application/json";
 
-            await context.Response.WriteAsync(result.ToString(CultureInfo.InvariantCulture));
+            await SerializeAsync(context.Response.Body, result, JsonOptions);
         }
     }
 
