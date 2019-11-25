@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using System.Globalization;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -14,30 +15,26 @@ namespace Subtract
 {
     public class Startup
     {
-        public void Configure(IApplicationBuilder app)
-        {
-            app.UseRouting();
-
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapPost("/subtract", async ctx =>
-                {
-                    var operands = await DeserializeAsync<Operands>(ctx.Request.Body);
-
-                    var result = decimal.Parse(operands.OperandOne) - decimal.Parse(operands.OperandTwo);
-
-                    ctx.Response.ContentType = "application/json";
-
-                    await ctx.Response.WriteAsync(result.ToString(CultureInfo.InvariantCulture));
-                });
-            });
-        }
-
         public static void Main(string[] args) =>
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(x => x.UseStartup<Startup>())
                 .Build()
                 .Run();
+
+        public void Configure(IApplicationBuilder app) =>
+            app.UseRouting()
+               .UseEndpoints(x => x.MapPost("/subtract", Subtract));
+
+        private static async Task Subtract(HttpContext context)
+        {
+            var operands = await DeserializeAsync<Operands>(context.Request.Body);
+
+            var result = decimal.Parse(operands.OperandOne) - decimal.Parse(operands.OperandTwo);
+
+            context.Response.ContentType = "application/json";
+
+            await context.Response.WriteAsync(result.ToString(CultureInfo.InvariantCulture));
+        }
     }
 
     public class Operands
