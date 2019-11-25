@@ -3,50 +3,32 @@
 // Licensed under the MIT License.
 // ------------------------------------------------------------
 
-using System.Text.Json;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Hosting;
-using static System.Text.Json.JsonSerializer;
+using Microsoft.AspNetCore.Routing;
 
 namespace Subtract
 {
-    public class Startup
+    public class Startup : App
     {
-        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
+        public static void Main(string[] args) => Run<Startup>(args);
+
+        protected override void Configure(IEndpointRouteBuilder app)
         {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            PropertyNameCaseInsensitive = true,
-        };
+            app.MapPost("/subtract", async ctx =>
+            {
+                var operands = await ctx.ReadJsonAsync<Operands>();
 
-        public static void Main(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(x => x.UseStartup<Startup>())
-                .Build()
-                .Run();
+                var result = decimal.Parse(operands.OperandOne) - decimal.Parse(operands.OperandTwo);
 
-        public void Configure(IApplicationBuilder app) =>
-            app.UseRouting()
-               .UseEndpoints(x => x.MapPost("/subtract", Subtract));
-
-        private static async Task Subtract(HttpContext context)
-        {
-            var operands = await DeserializeAsync<Operands>(context.Request.Body, JsonOptions);
-
-            var result = decimal.Parse(operands.OperandOne) - decimal.Parse(operands.OperandTwo);
-
-            context.Response.ContentType = "application/json";
-
-            await SerializeAsync(context.Response.Body, result, JsonOptions);
+                await ctx.WriteJsonAsync(result);
+            });
         }
-    }
 
-    public class Operands
-    {
-        public string OperandOne { get; set; }
+        private class Operands
+        {
+            public string OperandOne { get; set; }
 
-        public string OperandTwo { get; set; }
+            public string OperandTwo { get; set; }
+        }
     }
 }
